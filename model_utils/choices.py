@@ -31,12 +31,12 @@ class Choices(object):
         for c in choices:
             c_tuple = c if is_tuple else (c,)
 
-            for member in c_tuple:
-                for l in member:
-                    if l not in allowed_letters:
-                        raise Exception(
-                            'A choice can only be any lowercase alphabetical letter or "_": {}'.format(member)
-                        )
+            first_member = c_tuple[0]
+            for l in first_member:
+                if l not in allowed_letters:
+                    raise Exception(
+                        'A choice (value) can only be a combination of lowercase alphabetical letters and "_": {}'.format(first_member)
+                    )
 
         self._choices = [
             (c, c)
@@ -45,10 +45,17 @@ class Choices(object):
             for c in choices
         ]
 
+        choice_values = [c[0] for c in self._choices]
         choice_descriptions = [c[1] for c in self._choices]
 
+        if len(set(choice_values)) != len(choice_values):
+            raise Exception('All choice values must be unique: {}'.format(choice_values))
+
+        if len(set(choice_descriptions)) != len(choice_descriptions):
+            raise Exception('All choice descriptions must be unique: {}'.format(choice_descriptions))
+
         if default is not None:
-            if default not in choice_descriptions:
+            if default not in choice_values:
                 raise Exception(
                     'Default "{}" is not one of the choices: {}'.format(
                         default,
@@ -56,20 +63,23 @@ class Choices(object):
                     )
                 )
 
-            index = choice_descriptions.index(default)
+            index = choice_values.index(default)
 
             self._default = self._choices[index][0]
         else:
             self._default = None
 
         for c in self._choices:
-            setattr(self, c[1].upper(), c[0])
+            setattr(self, c[0].upper(), c[0])
 
     def __iter__(self):
         return self.ChoiceIterator(self)
 
     def all(self):
         return list(self._choices)
+
+    def all_descriptions(self):
+        return [c[1] for c in self._choices]
 
     def default(self):
         if self._default is None:
@@ -80,11 +90,13 @@ class Choices(object):
         for c in self._choices:
             if desc == c[1]:
                 return c[0]
+        raise Exception('Could not convert "{}" to a choice'.format(desc))
 
     def to_description(self, choice):
         for c in self._choices:
             if choice == c[0]:
                 return c[1]
+        raise Exception('Could not convert "{}" to a description'.format(choice))
 
 class Bitmap(object):
 
